@@ -1,0 +1,36 @@
+# FastAPI backend
+fastapi==0.109.1
+uvicorn[standard]==0.23.2
+
+# OpenAI API (STT/LLM)
+openai==1.29.0
+
+# Speech-to-Text and temporary file handling
+aiofiles==23.1.0
+python-multipart
+
+# Hugging Face Transformers for emotion detection
+transformers==4.42.2
+torch==2.2.0
+sentencepiece==0.1.99
+
+# TTS - Coqui TTS
+TTS
+numpy
+soundfile==0.12.1
+
+# Streamlit frontend
+streamlit==1.29.0
+requests==2.31.0
+
+# Database (SQLite with SQLAlchemy)
+sqlalchemy==2.0.23
+
+# Scheduler for reminders/check-ins
+apscheduler==3.10.4
+
+# Optional: For better performance in audio processing
+scipy==1.11.3
+
+# Environment variable management
+python-dotenv==1.0.0

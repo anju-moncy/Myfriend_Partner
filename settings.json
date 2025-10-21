@@ -1,0 +1,8 @@
+{
+    "problems.decorations.enabled": false,  // Hides underlines in editor
+    "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "none",  // If Python warnings persist
+    "reportUndefinedVariable": "none"
+    },
+         "telemetry.telemetryLevel": "off"  // Replaces old telemetry settings
+}
