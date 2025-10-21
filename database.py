@@ -38,6 +38,8 @@ class User(Base):
     last_mood = Column(String, default="neutral")
     last_activity = Column(DateTime, default=datetime.now)
     reminders = relationship("Reminder", back_populates="user")
+    # Chat history relationship
+    chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
 
 
 class Reminder(Base):
@@ -47,7 +49,18 @@ class Reminder(Base):
     message = Column(String)
     scheduled_time = Column(DateTime)
     sent = Column(Boolean, default=False)
-    user = relationship("User ", back_populates="reminders")
+    user = relationship("User", back_populates="reminders")
+
+
+class Chat(Base):
+    __tablename__ = "chats"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    user_message = Column(String)
+    ai_response = Column(String)
+    mood = Column(String, default="neutral")
+    created_at = Column(DateTime, default=datetime.now)
+    user = relationship("User", back_populates="chats")
 
 
 # Create tables
@@ -95,6 +108,55 @@ def get_or_create_user(session_id: str, db: Session) -> User:
         db.commit()
         logger.info(f"Created user for session: {session_id}")
     return user
+
+
+def add_reminder(user_id: int, message: str, scheduled_time: DateTime, db: Session) -> Reminder:
+    """Create a new reminder for a user."""
+    reminder = Reminder(
+        user_id=user_id,
+        message=message,
+        scheduled_time=scheduled_time,
+        sent=False,
+    )
+    db.add(reminder)
+    db.commit()
+    db.refresh(reminder)
+    return reminder
+
+
+def get_chat_history(user_id: int, db: Session) -> List["Chat"]:
+    """Return full chat history for a user ordered by time."""
+    return (
+        db.query(Chat)
+        .filter(Chat.user_id == user_id)
+        .order_by(Chat.created_at.asc())
+        .all()
+    )
+
+
+def add_chat(
+    user_id: int,
+    user_message: str,
+    ai_response: str,
+    mood: str,
+    db: Session,
+) -> "Chat":
+    """Persist a chat exchange and update user activity/mood."""
+    chat = Chat(
+        user_id=user_id,
+        user_message=user_message,
+        ai_response=ai_response,
+        mood=mood,
+    )
+    db.add(chat)
+    # Update user activity/mood for convenience
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        user.last_mood = mood
+        user.last_activity = datetime.now()
+    db.commit()
+    db.refresh(chat)
+    return chat
 
 
 # Test (run python database.py to verify)

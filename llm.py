@@ -1,4 +1,4 @@
-import openai
+from openai import OpenAI
 from datetime import datetime
 from database import get_chat_history, add_chat, add_reminder, get_or_create_user
 from sqlalchemy.orm import Session
@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI()
 
 
 def chat_with_llm(user_text: str, mood: str, session_id: str, db: Session):
@@ -30,7 +30,7 @@ def chat_with_llm(user_text: str, mood: str, session_id: str, db: Session):
     messages.append({"role": "user", "content": user_text})
 
     # Generate response
-    response = openai.chat.completions.create(
+    response = client.chat.completions.create(
         model="gpt-4o-mini", messages=messages, max_tokens=150
     )
     reply_text = response.choices[0].message.content
