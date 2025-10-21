@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, HTTPException, Depends, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -23,6 +24,15 @@ from database import (
 
 app = FastAPI(title="Friend AI - Your True Friend")
 
+# Allow Streamlit (localhost:8501) to call the API during local dev
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # tighten in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,7 +42,6 @@ os.makedirs("temp_audio", exist_ok=True)
 
 # Scheduler for reminders and check-ins (runs in background)
 scheduler = BackgroundScheduler()
-scheduler.start()
 
 
 def handle_reminders():
@@ -57,9 +66,25 @@ def proactive_checkin():
     db.close()
 
 
-# Schedule jobs
-scheduler.add_job(handle_reminders, "interval", minutes=1)
-scheduler.add_job(proactive_checkin, "interval", hours=24)
+@app.on_event("startup")
+def start_scheduler() -> None:
+    """Start APScheduler and register jobs on app startup."""
+    if not scheduler.running:
+        scheduler.add_job(
+            handle_reminders,
+            "interval",
+            minutes=1,
+            id="handle_reminders",
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            proactive_checkin,
+            "interval",
+            hours=24,
+            id="proactive_checkin",
+            replace_existing=True,
+        )
+        scheduler.start()
 
 
 @app.post("/chat")
@@ -127,5 +152,8 @@ async def get_audio(filename: str):
     raise HTTPException(status_code=404, detail="File not found")
 
 
-# Cleanup scheduler on shutdown
-atexit.register(lambda: scheduler.shutdown())
+@app.on_event("shutdown")
+def shutdown_scheduler() -> None:
+    """Cleanly shut down the scheduler on app shutdown."""
+    if scheduler.running:
+        scheduler.shutdown()
