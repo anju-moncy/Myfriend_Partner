@@ -1,4 +1,4 @@
-import openai
+from openai import OpenAI
 import tempfile
 import os
 import io
@@ -11,6 +11,8 @@ async def transcribe_audio(file):
 
     audio_file = io.BytesIO(content)
     audio_file.name = file.filename
-
-    transcript = openai.audio.transcriptions.create(model="whisper-1", file=audio_file)
+    client = OpenAI()
+    transcript = client.audio.transcriptions.create(
+        model="whisper-1", file=audio_file
+    )
     return transcript.text
