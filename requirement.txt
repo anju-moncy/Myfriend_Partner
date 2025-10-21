@@ -18,6 +18,7 @@ sentencepiece==0.1.99
 TTS
 numpy
 soundfile==0.12.1
+pyttsx3==2.90
 
 # Streamlit frontend
 streamlit==1.29.0
