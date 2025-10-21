@@ -47,7 +47,18 @@ class Reminder(Base):
     message = Column(String)
     scheduled_time = Column(DateTime)
     sent = Column(Boolean, default=False)
-    user = relationship("User ", back_populates="reminders")
+    user = relationship("User", back_populates="reminders")
+
+
+# Chat history for memory
+class Chat(Base):
+    __tablename__ = "chats"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    user_message = Column(String)
+    ai_response = Column(String)
+    mood = Column(String, default="neutral")
+    created_at = Column(DateTime, default=datetime.now)
 
 
 # Create tables
@@ -95,6 +106,38 @@ def get_or_create_user(session_id: str, db: Session) -> User:
         db.commit()
         logger.info(f"Created user for session: {session_id}")
     return user
+
+
+# New helpers used by llm.py
+def add_chat(
+    user_id: int,
+    user_message: str,
+    ai_response: str,
+    mood: str,
+    db: Session,
+) -> Chat:
+    chat = Chat(
+        user_id=user_id,
+        user_message=user_message,
+        ai_response=ai_response,
+        mood=mood,
+    )
+    db.add(chat)
+    db.commit()
+    db.refresh(chat)
+    return chat
+
+
+def get_chat_history(user_id: int, db: Session) -> List[Chat]:
+    return db.query(Chat).filter(Chat.user_id == user_id).order_by(Chat.id.asc()).all()
+
+
+def add_reminder(user_id: int, message: str, when: datetime, db: Session) -> Reminder:
+    reminder = Reminder(user_id=user_id, message=message, scheduled_time=when)
+    db.add(reminder)
+    db.commit()
+    db.refresh(reminder)
+    return reminder
 
 
 # Test (run python database.py to verify)
