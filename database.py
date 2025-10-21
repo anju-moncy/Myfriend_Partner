@@ -38,6 +38,7 @@ class User(Base):
     last_mood = Column(String, default="neutral")
     last_activity = Column(DateTime, default=datetime.now)
     reminders = relationship("Reminder", back_populates="user")
+    chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
 
 
 class Reminder(Base):
@@ -47,7 +48,18 @@ class Reminder(Base):
     message = Column(String)
     scheduled_time = Column(DateTime)
     sent = Column(Boolean, default=False)
-    user = relationship("User ", back_populates="reminders")
+    user = relationship("User", back_populates="reminders")
+
+
+class Chat(Base):
+    __tablename__ = "chats"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    created_at = Column(DateTime, default=datetime.now)
+    user_message = Column(String)
+    ai_response = Column(String)
+    mood = Column(String, default="neutral")
+    user = relationship("User", back_populates="chats")
 
 
 # Create tables
@@ -85,7 +97,49 @@ def mark_reminder_sent(reminder_id: int, db: Session) -> bool:
     return False
 
 
-# Additional: get_or_create_user (from previous; for /chat endpoint)
+# Additional helpers
+def add_reminder(user_id: int, message: str, scheduled_time: datetime, db: Session) -> Reminder:
+    """Create and persist a new reminder for a user."""
+    reminder = Reminder(user_id=user_id, message=message, scheduled_time=scheduled_time)
+    db.add(reminder)
+    db.commit()
+    db.refresh(reminder)
+    return reminder
+
+
+def get_chat_history(user_id: int, db: Session) -> List[Chat]:
+    """Return all chats for a user ordered by creation time."""
+    return (
+        db.query(Chat)
+        .filter(Chat.user_id == user_id)
+        .order_by(Chat.created_at.asc(), Chat.id.asc())
+        .all()
+    )
+
+
+def add_chat(
+    user_id: int, user_message: str, ai_response: str, mood: str, db: Session
+) -> Chat:
+    """Persist a chat exchange and update user state."""
+    chat = Chat(
+        user_id=user_id,
+        user_message=user_message,
+        ai_response=ai_response,
+        mood=mood,
+    )
+    db.add(chat)
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        user.last_mood = mood
+        user.last_activity = datetime.now()
+
+    db.commit()
+    db.refresh(chat)
+    return chat
+
+
+# get_or_create_user (for /chat endpoint)
 def get_or_create_user(session_id: str, db: Session) -> User:
     """Fetch or create user by session_id."""
     user = db.query(User).filter(User.session_id == session_id).first()

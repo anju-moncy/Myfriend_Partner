@@ -4,12 +4,13 @@ from transformers import pipeline
 classifier = pipeline(
     "text-classification",
     model="j-hartmann/emotion-english-distilroberta-base",
-    top_k=1,
 )
 
 
 def detect_emotion(text):
     if not text.strip():
         return "neutral"
-    result = classifier(text)[0]
-    return result["label"]
+    result = classifier(text)
+    # Default output is a list of dicts; take top prediction
+    top = result[0] if isinstance(result, list) and result else {"label": "neutral"}
+    return top.get("label", "neutral")
