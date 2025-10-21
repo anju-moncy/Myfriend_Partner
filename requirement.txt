@@ -14,8 +14,8 @@ transformers==4.42.2
 torch==2.2.0
 sentencepiece==0.1.99
 
-# TTS - Coqui TTS
-TTS
+# TTS - use system TTS via pyttsx3
+pyttsx3==2.90
 numpy
 soundfile==0.12.1
 
